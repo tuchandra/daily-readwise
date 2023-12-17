@@ -19,7 +19,7 @@ Toolchain:
 - [bun](https://bun.sh/docs)
 - [biome](https://biomejs.dev/guides/getting-started/)
 - [Obsidian API documentation](https://github.com/obsidianmd/obsidian-api) and [developer docs](https://docs.obsidian.md/Home)
-- credits to [metabind](https://github.com/mProjectsCode/obsidian-meta-bind-plugin/) for being an example of bun commands
+- credits to [metabind](https://github.com/mProjectsCode/obsidian-meta-bind-plugin/) for being an example of bun commands ... itself based off [lemons-plugin-template](https://github.com/mProjectsCode/lemons-plugin-template)
 - [obsidian-readwise](https://github.com/readwiseio/obsidian-readwise/) official plugin
 
 I know that [hot-reload](https://github.com/pjeby/hot-reload) is recommended; why? How does this integrate with bun's dev server? The template has `npm run dev` starting compilation in watch mode; bun can do the same, and then I think hot-reload makes Obsidian pick up the changes?
