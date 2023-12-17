@@ -8,7 +8,7 @@
     "dev": "bun run esbuild.dev.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && bun run esbuild.config.mjs production",
     "dev-publish": "bun run esbuild.publish.config.mjs",
-    "build-publish": "tsc -noEmit -skipLibCheck && node esbuild.publish.config.mjs production",
+    "build-publish": "tsc -noEmit -skipLibCheck && node esbuild.publish.config.mjs production"
   },
   "scripts": {
     "tsc": "tsc -noEmit",

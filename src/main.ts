@@ -4,10 +4,12 @@
 import {
   App,
   Editor,
+  MarkdownFileInfo,
   MarkdownView,
   Modal,
   Notice,
   Plugin,
+  PluginManifest,
   PluginSettingTab,
   Setting,
 } from "obsidian";
@@ -24,6 +26,11 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
+
+  constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    this.settings = DEFAULT_SETTINGS;
+  }
 
   async onload() {
     await this.loadSettings();
@@ -56,7 +63,7 @@ export default class MyPlugin extends Plugin {
     this.addCommand({
       id: "sample-editor-command",
       name: "Sample editor command",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
+      editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
         console.log(editor.getSelection());
         editor.replaceSelection("Sample Editor Command");
       },
@@ -151,12 +158,3 @@ class SampleSettingTab extends PluginSettingTab {
       );
   }
 }
-
-const server = Bun.serve({
-  port: 3000,
-  fetch(req) {
-    return new Response("Bun!");
-  },
-});
-
-console.log(`Listening on http://localhost:${server.port} ...`);
