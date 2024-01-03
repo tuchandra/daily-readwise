@@ -1,35 +1,23 @@
 {
   "compilerOptions": {
-    "types": ["bun-types"],
-
-    // from bun docs > "enable latest features"
-    "lib": ["DOM", "ESNext"],
+    "target": "ES2020",
+    "useDefineForClassFields": true,
     "module": "ESNext",
-    "target": "ES6",
-
-    // from bun docs (no reason given)
-    "moduleResolution": "bundler",
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "moduleDetection": "force",
-    "allowJs": true,
-
-    // from bun docs > "best practices"
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "composite": true,
-    "downlevelIteration": true,
-    "allowSyntheticDefaultImports": true,
 
-    // unsure about all these
-    "baseUrl": ".",
-    "noImplicitAny": true,
-    "importHelpers": true,
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "strictNullChecks": true,
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "**/*.ts"
-  ]
+  "include": ["src"]
 }

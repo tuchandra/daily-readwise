@@ -1,76 +1,136 @@
-/// <reference lib="dom" />
-/// <reference lib="dom.iterable" />
-
 import {
   App,
   Editor,
-  MarkdownFileInfo,
   MarkdownView,
   Modal,
   Notice,
   Plugin,
-  PluginManifest,
   PluginSettingTab,
   Setting,
 } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-  mySetting: string;
+interface PluginSettings {
+  readwiseAPIToken?: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-  mySetting: 'default',
-};
+/**
+ * Simplified version of the official Readwise plugin's settings; we need the API token
+ * and the book IDs/titles map so that we can integrate with the existing exports.
+ */
+interface ReadwiseOfficialPluginSettings {
+  booksIDsMap: { [key: string]: string };
+  token: string;
+}
 
-export default class MyPlugin extends Plugin {
-  settings: MyPluginSettings;
+export interface ReadwiseReview {
+  review_id: number;
+  review_url: string;
+  review_completed: boolean;
+  highlights: ReadwiseHighlight[];
+}
 
-  constructor(app: App, manifest: PluginManifest) {
-    super(app, manifest);
-    this.settings = DEFAULT_SETTINGS;
+export interface ReadwiseHighlight {
+  id: number;
+  text: string;
+  title: string;
+  author: string;
+
+  // We don't care about any of the other fields
+  url: string | null;
+  source_url: string | null;
+  source_type: string;
+  category: string | null;
+  location_type: string;
+  location: number;
+  note: string;
+  highlighted_at: string;
+  highlight_url: string | null;
+  image_url: string;
+  api_source: string | null;
+}
+
+
+export default class DailyHighlightsPlugin extends Plugin {
+  settings: PluginSettings = {};
+
+  getAuthHeaders() {
+    return {
+      AUTHORIZATION: `Token ${this.settings.readwiseAPIToken}`,
+    };
+  }
+
+  getOfficialPluginSettings(): ReadwiseOfficialPluginSettings {
+    const plugins = this.app.plugins; // property 'plugins' does not exist
+    const settings = plugins.plugins['readwise-official'].settings;
+    return settings;
+  }
+
+  /**
+   * If there's no token set, add a command to read it from the _official_ Readwise plugin settings.
+   * (Assume that it's installed and enabled, I suppose.)
+   *
+   * Accessing the data from another plugin is questionable. I don't think it's explicitly
+   * forbidden, but I also don't think it's intended. (The type definition for `this.app`
+   * does not include `plugins`, so it's at minimum undocumented.)
+   *
+   * This is primarily for my own use, and it's gated behind a command the user has to choose,
+   * though, so I'm not too worried about it.
+   */
+  async getTokenFromOfficialPlugin(): Promise<void> {
+    const apiToken = this.getOfficialPluginSettings().token;
+    this.settings.readwiseAPIToken = apiToken;
+
+    await this.saveSettings();
+    new Notice('Successfully set Readwise API token');
+  }
+
+  async getReview(): Promise<ReadwiseReview> {
+    const response = await fetch(`https://readwise.io/api/v2/review/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    const responseJson = await response.json();
+    console.log(responseJson);
+    return responseJson;
+  }
+
+  /**
+   * Find the note that contains the given highlight. Return the block-reference link.
+   */
+  highlightToMarkdown(highlight: ReadwiseHighlight): string | undefined {
+    const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
+
+    // Find the key/value pair where the value is the highlight.id
+    const bookTitle = Object.entries(bookIdsMap).find( ([_key, value]) => value === highlight.id.toString() )?.[0];
+    return bookTitle;
   }
 
   async onload() {
     await this.loadSettings();
 
     // This creates an icon in the left ribbon.
-    const ribbonIconEl = this.addRibbonIcon(
-      'dice',
-      'Sample Plugin',
-      (evt: MouseEvent) => {
-        // Called when the user clicks the icon.
-        new Notice('This is a notice!');
+    this.addRibbonIcon(
+      'book-open',
+      'Review highlights',
+      async (_evt: MouseEvent) => {
+        new Notice('This is a notice! I hope this changed.');
+        await this.getTokenFromOfficialPlugin();
       },
     );
-    // Perform additional things with the ribbon
-    ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-    // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    const statusBarItemEl = this.addStatusBarItem();
-    statusBarItemEl.setText('Status Bar Text');
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
-      id: 'open-sample-modal-simple',
-      name: 'Open sample modal (simple)',
-      callback: () => {
-        new SampleModal(this.app).open();
+      id: 'add-review-highlights',
+      name: 'Add daily review highlights to current note',
+      callback: async () => {
+        await this.getTokenFromOfficialPlugin();
+        const review = await this.getReview();
+        const highlights = review.highlights;
+        console.log(highlights);
+        console.log(highlights.map(this.highlightToMarkdown.bind(this)));
       },
     });
-    // This adds an editor command that can perform some operation on the current editor instance
-    this.addCommand({
-      id: 'sample-editor-command',
-      name: 'Sample editor command',
-      editorCallback: (
-        editor: Editor,
-        view: MarkdownView | MarkdownFileInfo,
-      ) => {
-        console.log(editor.getSelection());
-        editor.replaceSelection('Sample Editor Command');
-      },
-    });
+
     // This adds a complex command that can check whether the current state of the app allows execution of the command
     this.addCommand({
       id: 'open-sample-modal-complex',
@@ -92,8 +152,14 @@ export default class MyPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'find-readwise-token',
+      name: 'Set the Readwise API token from the official plugin settings',
+      callback: this.getTokenFromOfficialPlugin.bind(this),
+    });
+
     // This adds a settings tab so the user can configure various aspects of the plugin
-    this.addSettingTab(new SampleSettingTab(this.app, this));
+    this.addSettingTab(new SettingTab(this.app, this));
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
@@ -109,9 +175,7 @@ export default class MyPlugin extends Plugin {
 
   onunload() {}
 
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
+  async loadSettings() {}
 
   async saveSettings() {
     await this.saveData(this.settings);
@@ -119,16 +183,13 @@ export default class MyPlugin extends Plugin {
 }
 
 class SampleModal extends Modal {
-  text: string;
-
   constructor(app: App) {
     super(app);
-    this.text = 'Hello!';
   }
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.setText(this.text);
+    contentEl.setText('Woah!');
   }
 
   onClose() {
@@ -137,10 +198,10 @@ class SampleModal extends Modal {
   }
 }
 
-class SampleSettingTab extends PluginSettingTab {
-  plugin: MyPlugin;
+class SettingTab extends PluginSettingTab {
+  plugin: DailyHighlightsPlugin;
 
-  constructor(app: App, plugin: MyPlugin) {
+  constructor(app: App, plugin: DailyHighlightsPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -151,25 +212,18 @@ class SampleSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Setting #1')
-      .setDesc("It's a secret")
+      .setName('Readwise API token')
+      .setDesc(
+        'API token from readwise.io. (Requires active Readwise subscription.)',
+      )
       .addText((text) =>
         text
-          .setPlaceholder('Enter your secret')
-          .setValue(this.plugin.settings.mySetting)
+          .setPlaceholder('n/a')
+          .setValue(this.plugin.settings.readwiseAPIToken!)
           .onChange(async (value) => {
-            this.plugin.settings.mySetting = value;
+            this.plugin.settings.readwiseAPIToken = value;
             await this.plugin.saveSettings();
           }),
       );
   }
 }
-
-const server = Bun.serve({
-  port: 3000,
-  fetch(request) {
-    return new Response('Welcome to Bun!');
-  },
-});
-
-console.log(`Listening on localhost:${server.port}`);
