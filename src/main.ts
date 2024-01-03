@@ -1,12 +1,16 @@
 import {
   App,
+  BlockCache,
   Editor,
+  FuzzyMatch,
+  FuzzySuggestModal,
   MarkdownView,
   Modal,
   Notice,
   Plugin,
   PluginSettingTab,
   Setting,
+  TFile,
 } from 'obsidian';
 
 interface PluginSettings {
@@ -36,19 +40,68 @@ export interface ReadwiseHighlight {
   author: string;
 
   // We don't care about any of the other fields
-  url: string | null;
-  source_url: string | null;
-  source_type: string;
-  category: string | null;
-  location_type: string;
-  location: number;
-  note: string;
-  highlighted_at: string;
-  highlight_url: string | null;
-  image_url: string;
-  api_source: string | null;
+  url?: string | null;
+  source_url?: string | null;
+  source_type?: string;
+  category?: string | null;
+  location_type?: string;
+  location?: number;
+  note?: string;
+  highlighted_at?: string;
+  highlight_url?: string | null;
+  image_url?: string;
+  api_source?: string | null;
 }
 
+export interface ReadwiseHighlightDetail {
+  id: number;
+  book_id: number;
+  text: string;
+
+  // We don't care about any of the other fields
+  note?: string;
+  location?: number;
+  location_type?: string;
+  highlighted_at?: string;
+  url?: string | null;
+  color?: string;
+  updated?: string;
+  tags?: string[];
+}
+
+export interface HighlightText {
+  id: number;
+  book_id: number;
+  text: string;
+  title: string;
+  author: string;
+}
+
+export class HighlightModal extends FuzzySuggestModal<HighlightText> {
+  highlights: HighlightText[];
+
+  constructor(app: App, highlights: HighlightText[]) {
+    super(app);
+    this.highlights = highlights;
+  }
+
+  getItems(): HighlightText[] {
+    return this.highlights;
+  }
+
+  getItemText(item: HighlightText): string {
+    return item.text;
+  }
+
+  onChooseItem(item: HighlightText) {
+    new Notice(`Selected ${item.title}`);
+  }
+
+  renderSuggestion(item: FuzzyMatch<HighlightText>, el: HTMLElement): void {
+    el.createEl('div', { text: item.item.text });
+    el.createEl('small', { text: item.item.title });
+  }
+}
 
 export default class DailyHighlightsPlugin extends Plugin {
   settings: PluginSettings = {};
@@ -63,6 +116,10 @@ export default class DailyHighlightsPlugin extends Plugin {
     const plugins = this.app.plugins; // property 'plugins' does not exist
     const settings = plugins.plugins['readwise-official'].settings;
     return settings;
+  }
+
+  getBlockId({ id }: ReadwiseHighlightDetail): string {
+    return `rw${id}`;
   }
 
   /**
@@ -84,25 +141,55 @@ export default class DailyHighlightsPlugin extends Plugin {
     new Notice('Successfully set Readwise API token');
   }
 
-  async getReview(): Promise<ReadwiseReview> {
+  async getDailyReview(): Promise<ReadwiseReview> {
     const response = await fetch(`https://readwise.io/api/v2/review/`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
-    const responseJson = await response.json();
-    console.log(responseJson);
-    return responseJson;
+    const review: ReadwiseReview = await response.json();
+    return review;
   }
 
-  /**
-   * Find the note that contains the given highlight. Return the block-reference link.
-   */
-  highlightToMarkdown(highlight: ReadwiseHighlight): string | undefined {
+  async getHighlightDetail(
+    highlight: ReadwiseHighlight,
+  ): Promise<ReadwiseHighlightDetail> {
+    const response = await fetch(
+      `https://readwise.io/api/v2/highlights/${highlight.id}`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+    );
+    const highlightDetail: ReadwiseHighlightDetail = await response.json();
+    return highlightDetail;
+  }
+
+  async findBlock(highlight: ReadwiseHighlightDetail): Promise<{
+    highlight: ReadwiseHighlightDetail;
+    block: BlockCache;
+    maybeFile: TFile;
+    link: string;
+  }> {
     const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
 
     // Find the key/value pair where the value is the highlight.id
-    const bookTitle = Object.entries(bookIdsMap).find( ([_key, value]) => value === highlight.id.toString() )?.[0];
-    return bookTitle;
+    const bookTitle = Object.keys(bookIdsMap).find(
+      (title) => bookIdsMap[title] === highlight.book_id.toString(),
+    );
+    if (!bookTitle)
+      throw new Error(`No book found for id ${highlight.book_id}`);
+
+    const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
+    if (!(maybeFile instanceof TFile))
+      throw new Error(`No book found for id ${highlight.book_id}`);
+
+    // blocks: Record<string, BlockCache>, where keys are block IDs
+    const blocks = this.app.metadataCache.getFileCache(maybeFile)?.blocks || {};
+    const block = blocks[this.getBlockId(highlight)];
+
+    const link = `![[${maybeFile.basename}#^${block.id}]]`;
+
+    return { highlight, block, maybeFile, link };
   }
 
   async onload() {
@@ -112,44 +199,42 @@ export default class DailyHighlightsPlugin extends Plugin {
     this.addRibbonIcon(
       'book-open',
       'Review highlights',
-      async (_evt: MouseEvent) => {
-        new Notice('This is a notice! I hope this changed.');
-        await this.getTokenFromOfficialPlugin();
-      },
+      this.getTokenFromOfficialPlugin.bind(this),
     );
 
-    // This adds a simple command that can be triggered anywhere
+    // This adds a simple command
     this.addCommand({
       id: 'add-review-highlights',
-      name: 'Add daily review highlights to current note',
-      callback: async () => {
+      name: 'asdf Add daily review highlights to current note',
+      editorCallback: async (editor) => {
         await this.getTokenFromOfficialPlugin();
-        const review = await this.getReview();
-        const highlights = review.highlights;
-        console.log(highlights);
-        console.log(highlights.map(this.highlightToMarkdown.bind(this)));
+        const review = await this.getDailyReview();
+        const highlightDetails = await Promise.all(
+          review.highlights.map(this.getHighlightDetail.bind(this)),
+        );
+        const blockReferences = await Promise.allSettled(
+          highlightDetails.map(this.findBlock.bind(this)),
+        );
+        blockReferences.map(console.log);
+
+        const links = blockReferences.flatMap((x) =>
+          x.status === 'fulfilled' ? [x.value.link] : [],
+        );
+        editor.replaceSelection(
+          `## Highlights (from daily review)\n${links.join('\n')}\n`,
+        );
+
+        // new HighlightModal(this.app, highlightDetails).open();
+        // console.log(highlightDetails);
+        // console.log(highlights);
+        // console.log(blockReferences);
       },
     });
 
-    // This adds a complex command that can check whether the current state of the app allows execution of the command
     this.addCommand({
-      id: 'open-sample-modal-complex',
-      name: 'Open sample modal (complex)',
-      checkCallback: (checking: boolean) => {
-        // Conditions to check
-        const markdownView =
-          this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (markdownView) {
-          // If checking is true, we're simply "checking" if the command can be run.
-          // If checking is false, then we want to actually perform the operation.
-          if (!checking) {
-            new SampleModal(this.app).open();
-          }
-
-          // This command will only show up in Command Palette when the check function returns true
-          return true;
-        }
-      },
+      id: 'find-readwise-token',
+      name: 'Set the Readwise API token from the official plugin settings',
+      callback: this.getTokenFromOfficialPlugin.bind(this),
     });
 
     this.addCommand({

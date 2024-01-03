@@ -7,6 +7,26 @@ var __publicField = (obj, key, value) => {
 };
 Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: "Module" } });
 const obsidian = require("obsidian");
+class HighlightModal extends obsidian.FuzzySuggestModal {
+  constructor(app, highlights) {
+    super(app);
+    __publicField(this, "highlights");
+    this.highlights = highlights;
+  }
+  getItems() {
+    return this.highlights;
+  }
+  getItemText(item) {
+    return item.text;
+  }
+  onChooseItem(item) {
+    new obsidian.Notice(`Selected ${item.title}`);
+  }
+  renderSuggestion(item, el) {
+    el.createEl("div", { text: item.item.text });
+    el.createEl("small", { text: item.item.title });
+  }
+}
 class DailyHighlightsPlugin extends obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -21,6 +41,9 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
     const plugins = this.app.plugins;
     const settings = plugins.plugins["readwise-official"].settings;
     return settings;
+  }
+  getBlockId({ id }) {
+    return `rw${id}`;
   }
   /**
    * If there's no token set, add a command to read it from the _official_ Readwise plugin settings.
@@ -39,57 +62,75 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
     await this.saveSettings();
     new obsidian.Notice("Successfully set Readwise API token");
   }
-  async getReview() {
+  async getDailyReview() {
     const response = await fetch(`https://readwise.io/api/v2/review/`, {
       method: "GET",
       headers: this.getAuthHeaders()
     });
-    const responseJson = await response.json();
-    console.log(responseJson);
-    return responseJson;
+    const review = await response.json();
+    return review;
   }
-  /**
-   * Find the note that contains the given highlight. Return the block-reference link.
-   */
-  highlightToMarkdown(highlight) {
+  async getHighlightDetail(highlight) {
+    const response = await fetch(
+      `https://readwise.io/api/v2/highlights/${highlight.id}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders()
+      }
+    );
+    const highlightDetail = await response.json();
+    return highlightDetail;
+  }
+  async findBlock(highlight) {
     var _a;
     const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
-    const bookTitle = (_a = Object.entries(bookIdsMap).find(([_key, value]) => value === highlight.id.toString())) == null ? void 0 : _a[0];
-    return bookTitle;
+    const bookTitle = Object.keys(bookIdsMap).find(
+      (title) => bookIdsMap[title] === highlight.book_id.toString()
+    );
+    if (!bookTitle)
+      throw new Error(`No book found for id ${highlight.book_id}`);
+    const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
+    if (!(maybeFile instanceof obsidian.TFile))
+      throw new Error(`No book found for id ${highlight.book_id}`);
+    const blocks = ((_a = this.app.metadataCache.getFileCache(maybeFile)) == null ? void 0 : _a.blocks) || {};
+    const block = blocks[this.getBlockId(highlight)];
+    const link = `![[${maybeFile.basename}#^${block.id}]]`;
+    return { highlight, block, maybeFile, link };
   }
   async onload() {
     await this.loadSettings();
     this.addRibbonIcon(
       "book-open",
       "Review highlights",
-      async (_evt) => {
-        new obsidian.Notice("This is a notice! I hope this changed.");
-        await this.getTokenFromOfficialPlugin();
-      }
+      this.getTokenFromOfficialPlugin.bind(this)
     );
     this.addCommand({
       id: "add-review-highlights",
-      name: "Add daily review highlights to current note",
-      callback: async () => {
+      name: "asdf Add daily review highlights to current note",
+      editorCallback: async (editor) => {
         await this.getTokenFromOfficialPlugin();
-        const review = await this.getReview();
-        const highlights = review.highlights;
-        console.log(highlights);
-        console.log(highlights.map(this.highlightToMarkdown.bind(this)));
+        const review = await this.getDailyReview();
+        const highlightDetails = await Promise.all(
+          review.highlights.map(this.getHighlightDetail.bind(this))
+        );
+        const blockReferences = await Promise.allSettled(
+          highlightDetails.map(this.findBlock.bind(this))
+        );
+        blockReferences.map(console.log);
+        const links = blockReferences.flatMap(
+          (x) => x.status === "fulfilled" ? [x.value.link] : []
+        );
+        editor.replaceSelection(
+          `## Highlights (from daily review)
+${links.join("\n")}
+`
+        );
       }
     });
     this.addCommand({
-      id: "open-sample-modal-complex",
-      name: "Open sample modal (complex)",
-      checkCallback: (checking) => {
-        const markdownView = this.app.workspace.getActiveViewOfType(obsidian.MarkdownView);
-        if (markdownView) {
-          if (!checking) {
-            new SampleModal(this.app).open();
-          }
-          return true;
-        }
-      }
+      id: "find-readwise-token",
+      name: "Set the Readwise API token from the official plugin settings",
+      callback: this.getTokenFromOfficialPlugin.bind(this)
     });
     this.addCommand({
       id: "find-readwise-token",
@@ -112,19 +153,6 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
     await this.saveData(this.settings);
   }
 }
-class SampleModal extends obsidian.Modal {
-  constructor(app) {
-    super(app);
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.setText("Woah!");
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-}
 class SettingTab extends obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -144,4 +172,5 @@ class SettingTab extends obsidian.PluginSettingTab {
     );
   }
 }
+exports.HighlightModal = HighlightModal;
 exports.default = DailyHighlightsPlugin;
