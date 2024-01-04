@@ -122,8 +122,8 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
     this.addRibbonIcon(
-      'book-open',
-      'Review highlights',
+      'highlighter',
+      'Set Readwise API token',
       this.getTokenFromOfficialPlugin.bind(this),
     );
     this.addCommand({
@@ -159,21 +159,8 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
       name: 'Set the Readwise API token from the official plugin settings',
       callback: this.getTokenFromOfficialPlugin.bind(this),
     });
-    this.addCommand({
-      id: 'find-readwise-token',
-      name: 'Set the Readwise API token from the official plugin settings',
-      callback: this.getTokenFromOfficialPlugin.bind(this),
-    });
     this.addSettingTab(new SettingTab(this.app, this));
-    this.registerDomEvent(document, 'click', (evt) => {
-      console.log('click', evt);
-    });
-    this.registerInterval(
-      window.setInterval(() => console.log('setInterval'), 5 * 60 * 1e3),
-    );
   }
-  onunload() {}
-  async loadSettings() {}
   async saveSettings() {
     await this.saveData(this.settings);
   }

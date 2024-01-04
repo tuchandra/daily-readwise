@@ -4,7 +4,6 @@ import {
   Editor,
   FuzzyMatch,
   FuzzySuggestModal,
-  Modal,
   Notice,
   Plugin,
   PluginSettingTab,
@@ -98,7 +97,8 @@ export default class DailyHighlightsPlugin extends Plugin {
   }
 
   getOfficialPluginSettings(): ReadwiseOfficialPluginSettings {
-    const plugins = this.app.plugins; // property 'plugins' does not exist
+    // @ts-ignore; property 'plugins' is undocumented
+    const plugins = this.app.plugins;
     const settings = plugins.plugins['readwise-official'].settings;
     return settings;
   }
@@ -177,10 +177,9 @@ export default class DailyHighlightsPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    // This creates an icon in the left ribbon.
     this.addRibbonIcon(
-      'book-open',
-      'Review highlights',
+      'highlighter',
+      'Set Readwise API token',
       this.getTokenFromOfficialPlugin.bind(this),
     );
 
@@ -222,30 +221,9 @@ export default class DailyHighlightsPlugin extends Plugin {
       callback: this.getTokenFromOfficialPlugin.bind(this),
     });
 
-    this.addCommand({
-      id: 'find-readwise-token',
-      name: 'Set the Readwise API token from the official plugin settings',
-      callback: this.getTokenFromOfficialPlugin.bind(this),
-    });
-
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new SettingTab(this.app, this));
-
-    // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-    // Using this function will automatically remove the event listener when this plugin is disabled.
-    this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-      console.log('click', evt);
-    });
-
-    // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-    this.registerInterval(
-      window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-    );
   }
-
-  onunload() {}
-
-  async loadSettings() {}
 
   async saveSettings() {
     await this.saveData(this.settings);
