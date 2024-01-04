@@ -1,10 +1,8 @@
 import {
   App,
   BlockCache,
-  Editor,
   FuzzyMatch,
   FuzzySuggestModal,
-  MarkdownView,
   Modal,
   Notice,
   Plugin,
@@ -38,35 +36,12 @@ export interface ReadwiseHighlight {
   text: string;
   title: string;
   author: string;
-
-  // We don't care about any of the other fields
-  url?: string | null;
-  source_url?: string | null;
-  source_type?: string;
-  category?: string | null;
-  location_type?: string;
-  location?: number;
-  note?: string;
-  highlighted_at?: string;
-  highlight_url?: string | null;
-  image_url?: string;
-  api_source?: string | null;
 }
 
 export interface ReadwiseHighlightDetail {
   id: number;
   book_id: number;
   text: string;
-
-  // We don't care about any of the other fields
-  note?: string;
-  location?: number;
-  location_type?: string;
-  highlighted_at?: string;
-  url?: string | null;
-  color?: string;
-  updated?: string;
-  tags?: string[];
 }
 
 export interface HighlightText {
