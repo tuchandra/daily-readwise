@@ -1,9 +1,11 @@
 import {
   App,
   BlockCache,
+  Component,
   Editor,
   FuzzyMatch,
   FuzzySuggestModal,
+  MarkdownRenderer,
   Notice,
   Plugin,
   PluginSettingTab,
@@ -31,6 +33,7 @@ export interface HighlightModalEntry {
   highlightId: string;
   text: string;
   title: string;
+  path: string;
   // author: string;
 }
 
@@ -57,7 +60,7 @@ export class HighlightModal extends FuzzySuggestModal<HighlightModalEntry> {
 
     this.editor.replaceSelection(
       `Highlight from [[${item.title}]]\n\n` +
-        `![[${item.title}#^${item.highlightId}]]\n`,
+        `![[${item.title}#^${item.highlightId}]]\n\n`,
     );
 
     this.highlights.remove(item);
@@ -68,7 +71,13 @@ export class HighlightModal extends FuzzySuggestModal<HighlightModalEntry> {
     el: HTMLElement,
   ): void {
     el.createEl('h2', { text: match.item.title });
-    el.createEl('div', { text: match.item.text });
+    MarkdownRenderer.render(
+      this.app,
+      match.item.text,
+      el,
+      match.item.path,
+      new Component(),
+    );
   }
 }
 
@@ -163,11 +172,9 @@ export default class DailyHighlightsPlugin extends Plugin {
       name: 'asdf Add daily review highlights to current note',
       editorCallback: async (editor: Editor) => {
         const token = await this.getOrSetToken();
-        const highlightDetails = await getHighlights(token);
+        const highlights = await getHighlights(token);
         const blocks = await Promise.allSettled(
-          highlightDetails.map(
-            async (highlight) => await this.findBlock(highlight),
-          ),
+          highlights.map(this.findBlock.bind(this)),
         );
 
         const highlightsWithLinks = blocks.flatMap((x) =>
@@ -177,6 +184,7 @@ export default class DailyHighlightsPlugin extends Plugin {
         const modalContents = highlightsWithLinks.map((x) => ({
           highlightId: x.block.id,
           text: x.highlight.text,
+          path: x.file.path,
           title: x.file.basename,
         }));
         new HighlightModal(this.app, editor, modalContents).open();

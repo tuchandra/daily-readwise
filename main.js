@@ -59,13 +59,20 @@ class HighlightModal extends obsidian.FuzzySuggestModal {
       `Highlight from [[${item.title}]]
 
 ![[${item.title}#^${item.highlightId}]]
+
 `
     );
     this.highlights.remove(item);
   }
   renderSuggestion(match, el) {
     el.createEl("h2", { text: match.item.title });
-    el.createEl("div", { text: match.item.text });
+    obsidian.MarkdownRenderer.render(
+      this.app,
+      match.item.text,
+      el,
+      match.item.path,
+      new obsidian.Component()
+    );
   }
 }
 class DailyHighlightsPlugin extends obsidian.Plugin {
@@ -141,11 +148,9 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
       name: "asdf Add daily review highlights to current note",
       editorCallback: async (editor) => {
         const token = await this.getOrSetToken();
-        const highlightDetails = await getHighlights(token);
+        const highlights = await getHighlights(token);
         const blocks = await Promise.allSettled(
-          highlightDetails.map(
-            async (highlight) => await this.findBlock(highlight)
-          )
+          highlights.map(this.findBlock.bind(this))
         );
         const highlightsWithLinks = blocks.flatMap(
           (x) => x.status === "fulfilled" ? [x.value] : []
@@ -153,6 +158,7 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
         const modalContents = highlightsWithLinks.map((x) => ({
           highlightId: x.block.id,
           text: x.highlight.text,
+          path: x.file.path,
           title: x.file.basename
         }));
         new HighlightModal(this.app, editor, modalContents).open();
