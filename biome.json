@@ -8,5 +8,9 @@
   "formatter": { "indentStyle": "space" },
   "javascript": {
     "formatter": { "quoteStyle": "single" }
+  },
+  "files": {
+    "ignore": [".vscode/", "node_modules/", "src/readwise.ts", "main.js"],
+    "include": ["src/", "package.json"]
   }
 }
