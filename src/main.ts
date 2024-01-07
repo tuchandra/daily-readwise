@@ -143,13 +143,12 @@ export default class DailyHighlightsPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.addRibbonIcon(
-      'highlighter',
-      'Set Readwise API token',
-      this.getOrSetToken.bind(this),
-    );
+    this.addCommand({
+      id: 'set-readwise-token',
+      name: 'Set Readwise API token',
+      callback: this.getOrSetToken.bind(this),
+    });
 
-    // This adds a simple command
     this.addCommand({
       id: 'add-review-highlights',
       name: 'asdf Add daily review highlights to current note',
@@ -175,13 +174,6 @@ export default class DailyHighlightsPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: 'find-readwise-token',
-      name: 'Set the Readwise API token from the official plugin settings',
-      callback: this.getOrSetToken.bind(this),
-    });
-
-    // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new SettingTab(this.app, this));
   }
 

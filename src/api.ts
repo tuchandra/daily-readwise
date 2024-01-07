@@ -51,6 +51,10 @@ async function getHighlightBookId(
   return { bookId: highlightDetail.book_id };
 }
 
+/**
+ * Fetch your Readwise daily review, then (for each highlight) augment the
+ * review with the book ID.
+ */
 export async function getHighlights(token: string): Promise<HighlightDetail[]> {
   const review = await getDailyReview(token);
 

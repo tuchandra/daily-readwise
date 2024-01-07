@@ -124,11 +124,11 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
   }
   async onload() {
     await this.loadSettings();
-    this.addRibbonIcon(
-      "highlighter",
-      "Set Readwise API token",
-      this.getOrSetToken.bind(this)
-    );
+    this.addCommand({
+      id: "set-readwise-token",
+      name: "Set Readwise API token",
+      callback: this.getOrSetToken.bind(this)
+    });
     this.addCommand({
       id: "add-review-highlights",
       name: "asdf Add daily review highlights to current note",
@@ -150,11 +150,6 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
         }));
         new HighlightModal(this.app, editor, modalContents).open();
       }
-    });
-    this.addCommand({
-      id: "find-readwise-token",
-      name: "Set the Readwise API token from the official plugin settings",
-      callback: this.getOrSetToken.bind(this)
     });
     this.addSettingTab(new SettingTab(this.app, this));
   }
