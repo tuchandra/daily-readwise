@@ -1,58 +1,58 @@
-# Obsidian Sample Plugin
+# Readwise daily reviews, now in Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This is a _beta_ plugin adding features to the Readwise x Obsidian integration.
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+## Motivation
+I use both Readwise (https://readwise.io/) and Obsidian (https://obsidian.md) regularly.
+When reviewing my daily highlights in Readwise, I'd sometimes want to connect the highlight to something in my Obsidian vault.
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+Since my vault already has all of my Readwise highlights—and since I personally have each highlight exported as one block (a callout)—this plugin is mostly a matter of finding the block corresponding to some highlight.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## How it works
+_This requires a paid subscription to Readwise._
 
-## Quick links & resources
-Toolchain:
-- [bun](https://bun.sh/docs)
-- [biome](https://biomejs.dev/guides/getting-started/)
-- [Obsidian API documentation](https://github.com/obsidianmd/obsidian-api) and [developer docs](https://docs.obsidian.md/Home)
-- credits to [metabind](https://github.com/mProjectsCode/obsidian-meta-bind-plugin/) for being an example of bun commands ... itself based off [lemons-plugin-template](https://github.com/mProjectsCode/lemons-plugin-template)
-- [obsidian-readwise](https://github.com/readwiseio/obsidian-readwise/) official plugin
+The plugin assumes that the official [Readwise integration for Obsidian](https://github.com/readwiseio/obsidian-readwise) is installed.
+We use the official plugin's data for both (1) your Readwise API token and (2) the filename to book ID mapping.
 
-I know that [hot-reload](https://github.com/pjeby/hot-reload) is recommended; why? How does this integrate with bun's dev server? The template has `npm run dev` starting compilation in watch mode; bun can do the same, and then I think hot-reload makes Obsidian pick up the changes?
+We register a new command, "Add daily review highlights to current note."
+This gets your Readwise daily review [from the API](https://readwise.io/api_deets#review), attempts to locate each highlight in the vault, and presents them in a modal.
 
-This is all scaffolding. Man, what a confusing setup process. Why are there so many tools?
+![Screenshot of the modal with each of the review's highlight.](images/example-modal.png)
 
+## Sharp edges
+We read your Readwise API token from the official plugin's data.
+I don't know whether this is explicitly forbidden—the [developer policy](https://docs.obsidian.md/Developer+policies) makes no mention of this—but it's at _minimum_ questionable (and undocumented).
+That said, I built the plugin for my personal use; the plugin makes no attempt to hide this; the command is gated by a user action; and we only make read/GET requests.
 
-## (From template)
+Since the request volume is so low and the user is fully in-control, we don't make any attempt to cache responses or rate limit the requests.
 
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+The plugin assumes that highlights are stored and formatted the way that my vault stores and formats them.
+Specifically:
 
-### Releasing new releases
+- Each highlight is wrapped in a callout
+- The callout has a block reference ID, the string `rw` plus the highlight ID (e.g., `rw0041401448`)
+- You use `[[Markdown links]]` and not `[wiki](links)`.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+The plugin will ignore (silently or gracefully, depending on your perspective) highlights that it can't find (because the file was deleted, because there are multiple files with the book's name, etc.).
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Tools and development
+This project uses:
 
-### Adding your plugin to the community plugin list
+- [bun](https://bun.sh/) as a package manager
+- [vite](https://vitejs.dev/) as a bundler (because bun doesn't support CJS bundling)
+- [biome](https://biomejs.dev/) for linting and formatting
+- [hot-reload](https://github.com/pjeby/hot-reload) for simpler development
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+To develop the project:
 
-### Manually installing the plugin
+- Clone this repo.
+- Install [bun](https://bun.sh/), if needed.
+- Install dependencies with `bun install`.
+- Start the development server with `bun dev`.
+- Format and lint (with autofixes) with `bun fix`.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Releases
+I have not released this plugin and don't plan to.
+If you're interested in using this plugin, please install it via the excellent and community-maintained [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+
+Issues, PRs, and discussions are welcome.
