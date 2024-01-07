@@ -1,18 +1,22 @@
 {
   "name": "daily-readwise",
-  "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "devDependencies": {
+    "@biomejs/biome": "^1.4.1",
+    "@types/bun": "^1.0.0",
+    "obsidian": "latest",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  },
+  "private": true,
   "scripts": {
     "dev": "vite build --watch",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "format": "bunx @biomejs/biome format --write ."
+    "format": "bunx @biomejs/biome format --write .",
+    "lint": "bunx @biomejs/biome lint src/main.ts src/api.ts",
+    "lint:fix": "bunx @biomejs/biome lint src/main.ts src/api.ts --apply-unsafe",
+    "fix": "bun format && bun lint:fix"
   },
-  "devDependencies": {
-    "@biomejs/biome": "^1.4.1",
-    "obsidian": "latest",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8"
-  }
+  "type": "module"
 }
