@@ -31,11 +31,12 @@ async function getHighlightBookId(highlight, token) {
 }
 async function getHighlights(token) {
   const review = await getDailyReview(token);
-  const highlightDetails = [];
-  for (const highlight of review.highlights) {
-    const bookId = (await getHighlightBookId(highlight, token)).bookId;
-    highlightDetails.push({ ...highlight, bookId });
-  }
+  const highlightDetails = await Promise.all(
+    review.highlights.map(async (highlight) => ({
+      ...highlight,
+      bookId: (await getHighlightBookId(highlight, token)).bookId
+    }))
+  );
   return highlightDetails;
 }
 class HighlightModal extends obsidian.FuzzySuggestModal {

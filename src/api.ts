@@ -54,11 +54,12 @@ async function getHighlightBookId(
 export async function getHighlights(token: string): Promise<HighlightDetail[]> {
   const review = await getDailyReview(token);
 
-  const highlightDetails: HighlightDetail[] = [];
-  for (const highlight of review.highlights) {
-    const bookId = (await getHighlightBookId(highlight, token)).bookId;
-    highlightDetails.push({ ...highlight, bookId });
-  }
+  const highlightDetails = await Promise.all(
+    review.highlights.map(async (highlight) => ({
+      ...highlight,
+      bookId: (await getHighlightBookId(highlight, token)).bookId,
+    })),
+  );
   return highlightDetails;
 }
 
