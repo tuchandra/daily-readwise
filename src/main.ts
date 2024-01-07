@@ -10,7 +10,7 @@ import {
   Setting,
   TFile,
 } from 'obsidian';
-import { HighlightDetail, getHighlights } from './api';
+import { Highlight, getHighlights } from './api';
 
 interface PluginSettings {
   readwiseAPIToken: string;
@@ -109,15 +109,15 @@ export default class DailyHighlightsPlugin extends Plugin {
     return token;
   }
 
-  getBlockId({ id: highlightId }: HighlightDetail): string {
+  getBlockId({ id: highlightId }: Highlight): string {
     return `rw${highlightId}`;
   }
 
-  async findBlock(highlight: HighlightDetail): Promise<{
+  async findBlock(highlight: Highlight): Promise<{
     file: TFile;
     block: BlockCache;
     link: string;
-    highlight: HighlightDetail;
+    highlight: Highlight;
   }> {
     const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
 

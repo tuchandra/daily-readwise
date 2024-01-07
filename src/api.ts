@@ -2,17 +2,17 @@ interface ReadwiseReview {
   review_id: number;
   review_url: string;
   review_completed: boolean;
-  highlights: Highlight[];
+  highlights: ReviewHighlight[];
 }
 
-interface Highlight {
+interface ReviewHighlight {
   id: number;
   text: string;
   title: string;
   author: string;
 }
 
-export interface HighlightDetail extends Highlight {
+export interface Highlight extends ReviewHighlight {
   bookId: number;
 }
 
@@ -37,7 +37,7 @@ async function getDailyReview(token: string): Promise<ReadwiseReview> {
 }
 
 async function getHighlightBookId(
-  highlight: Highlight,
+  highlight: ReviewHighlight,
   token: string,
 ): Promise<{ bookId: number }> {
   const response = await fetch(
@@ -55,7 +55,7 @@ async function getHighlightBookId(
  * Fetch your Readwise daily review, then (for each highlight) augment the
  * review with the book ID.
  */
-export async function getHighlights(token: string): Promise<HighlightDetail[]> {
+export async function getHighlights(token: string): Promise<Highlight[]> {
   const review = await getDailyReview(token);
 
   const highlightDetails = await Promise.all(
