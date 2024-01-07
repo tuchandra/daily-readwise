@@ -161,7 +161,7 @@ export default class DailyHighlightsPlugin extends Plugin {
     this.addCommand({
       id: 'add-review-highlights',
       name: 'asdf Add daily review highlights to current note',
-      editorCallback: async (editor) => {
+      editorCallback: async (editor: Editor) => {
         const token = await this.getOrSetToken();
         const highlightDetails = await getHighlights(token);
         const blocks = await Promise.allSettled(
