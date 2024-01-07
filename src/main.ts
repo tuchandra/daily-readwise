@@ -112,6 +112,7 @@ export default class DailyHighlightsPlugin extends Plugin {
   getBlockId({ id: highlightId }: HighlightDetail): string {
     return `rw${highlightId}`;
   }
+
   async findBlock(highlight: HighlightDetail): Promise<{
     file: TFile;
     block: BlockCache;
