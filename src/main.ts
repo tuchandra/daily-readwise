@@ -10,9 +10,10 @@ import {
   Setting,
   TFile,
 } from 'obsidian';
+import { HighlightDetail, getDailyReview, getHighlightBookId } from './api';
 
 interface PluginSettings {
-  readwiseAPIToken?: string;
+  readwiseAPIToken: string;
 }
 
 /**
@@ -22,24 +23,6 @@ interface PluginSettings {
 interface ReadwiseOfficialPluginSettings {
   booksIDsMap: { [key: string]: string };
   token: string;
-}
-
-export interface ReadwiseReview {
-  review_id: number;
-  review_url: string;
-  review_completed: boolean;
-  highlights: Highlight[];
-}
-
-export interface Highlight {
-  id: number;
-  text: string;
-  title: string;
-  author: string;
-}
-
-export interface HighlightDetail extends Highlight {
-  bookId: number;
 }
 
 export interface HighlightModalEntry {
@@ -88,13 +71,7 @@ export class HighlightModal extends FuzzySuggestModal<HighlightModalEntry> {
 }
 
 export default class DailyHighlightsPlugin extends Plugin {
-  settings: PluginSettings = {};
-
-  getAuthHeaders() {
-    return {
-      AUTHORIZATION: `Token ${this.settings.readwiseAPIToken}`,
-    };
-  }
+  settings: PluginSettings = { readwiseAPIToken: '' };
 
   getOfficialPluginSettings(): ReadwiseOfficialPluginSettings {
     // @ts-ignore; property 'plugins' is undocumented
@@ -103,8 +80,11 @@ export default class DailyHighlightsPlugin extends Plugin {
     return settings;
   }
 
-  getBlockId({ id: highlightId }: HighlightDetail): string {
-    return `rw${highlightId}`;
+  getToken(): string {
+    if (!this.settings.readwiseAPIToken)
+      new Notice('No API token found for Readwise');
+
+    return this.settings.readwiseAPIToken;
   }
 
   /**
@@ -118,35 +98,20 @@ export default class DailyHighlightsPlugin extends Plugin {
    * This is primarily for my own use, and it's gated behind a command the user has to choose,
    * though, so I'm not too worried about it.
    */
-  async getTokenFromOfficialPlugin(): Promise<void> {
-    const apiToken = this.getOfficialPluginSettings().token;
-    this.settings.readwiseAPIToken = apiToken;
+  async getOrSetToken(): Promise<string> {
+    if (this.settings.readwiseAPIToken) return this.settings.readwiseAPIToken;
+
+    const token = this.getOfficialPluginSettings().token;
+    this.settings.readwiseAPIToken = token;
 
     await this.saveSettings();
     new Notice('Successfully set Readwise API token');
+    return token;
   }
 
-  async getDailyReview(): Promise<ReadwiseReview> {
-    const response = await fetch(`https://readwise.io/api/v2/review/`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-    const review: ReadwiseReview = await response.json();
-    return review;
+  getBlockId({ id: highlightId }: HighlightDetail): string {
+    return `rw${highlightId}`;
   }
-
-  async getHighlightBookId(highlight: Highlight): Promise<{ bookId: number }> {
-    const response = await fetch(
-      `https://readwise.io/api/v2/highlights/${highlight.id}`,
-      {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      },
-    );
-    const highlightDetail = await response.json();
-    return { bookId: highlightDetail.book_id };
-  }
-
   async findBlock(highlight: HighlightDetail): Promise<{
     file: TFile;
     block: BlockCache;
@@ -180,7 +145,7 @@ export default class DailyHighlightsPlugin extends Plugin {
     this.addRibbonIcon(
       'highlighter',
       'Set Readwise API token',
-      this.getTokenFromOfficialPlugin.bind(this),
+      this.getOrSetToken.bind(this),
     );
 
     // This adds a simple command
@@ -188,12 +153,12 @@ export default class DailyHighlightsPlugin extends Plugin {
       id: 'add-review-highlights',
       name: 'asdf Add daily review highlights to current note',
       editorCallback: async (editor) => {
-        await this.getTokenFromOfficialPlugin();
-        const review = await this.getDailyReview();
+        const token = await this.getOrSetToken();
+        const review = await getDailyReview(token);
         const highlightDetails = await Promise.all(
           review.highlights.map(async (highlight) => ({
             ...highlight,
-            bookId: (await this.getHighlightBookId(highlight)).bookId,
+            bookId: (await getHighlightBookId(highlight, token)).bookId,
           })),
         );
         const blocks = await Promise.allSettled(
@@ -218,12 +183,16 @@ export default class DailyHighlightsPlugin extends Plugin {
     this.addCommand({
       id: 'find-readwise-token',
       name: 'Set the Readwise API token from the official plugin settings',
-      callback: this.getTokenFromOfficialPlugin.bind(this),
+      callback: this.getOrSetToken.bind(this),
     });
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new SettingTab(this.app, this));
   }
+
+  onunload(): void {}
+
+  async loadSettings() {}
 
   async saveSettings() {
     await this.saveData(this.settings);
@@ -251,7 +220,7 @@ class SettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder('n/a')
-          .setValue(this.plugin.settings.readwiseAPIToken!)
+          .setValue(this.plugin.getToken())
           .onChange(async (value) => {
             this.plugin.settings.readwiseAPIToken = value;
             await this.plugin.saveSettings();
