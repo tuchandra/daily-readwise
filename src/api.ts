@@ -1,11 +1,11 @@
-export interface ReadwiseReview {
+interface ReadwiseReview {
   review_id: number;
   review_url: string;
   review_completed: boolean;
   highlights: Highlight[];
 }
 
-export interface Highlight {
+interface Highlight {
   id: number;
   text: string;
   title: string;
@@ -27,7 +27,7 @@ function getAuthHeaders(token: string) {
   return { AUTHORIZATION: `Token ${token}` };
 }
 
-export async function getDailyReview(token: string): Promise<ReadwiseReview> {
+async function getDailyReview(token: string): Promise<ReadwiseReview> {
   const response = await fetch('https://readwise.io/api/v2/review/', {
     method: 'GET',
     headers: getAuthHeaders(token),
@@ -36,7 +36,7 @@ export async function getDailyReview(token: string): Promise<ReadwiseReview> {
   return review;
 }
 
-export async function getHighlightBookId(
+async function getHighlightBookId(
   highlight: Highlight,
   token: string,
 ): Promise<{ bookId: number }> {
@@ -49,6 +49,17 @@ export async function getHighlightBookId(
   );
   const highlightDetail = await response.json();
   return { bookId: highlightDetail.book_id };
+}
+
+export async function getHighlights(token: string): Promise<HighlightDetail[]> {
+  const review = await getDailyReview(token);
+
+  const highlightDetails: HighlightDetail[] = [];
+  for (const highlight of review.highlights) {
+    const bookId = (await getHighlightBookId(highlight, token)).bookId;
+    highlightDetails.push({ ...highlight, bookId });
+  }
+  return highlightDetails;
 }
 
 // async function findBlock(highlight: HighlightDetail): Promise<{

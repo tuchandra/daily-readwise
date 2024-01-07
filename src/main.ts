@@ -10,7 +10,7 @@ import {
   Setting,
   TFile,
 } from 'obsidian';
-import { HighlightDetail, getDailyReview, getHighlightBookId } from './api';
+import { HighlightDetail, getHighlights } from './api';
 
 interface PluginSettings {
   readwiseAPIToken: string;
@@ -154,13 +154,7 @@ export default class DailyHighlightsPlugin extends Plugin {
       name: 'asdf Add daily review highlights to current note',
       editorCallback: async (editor) => {
         const token = await this.getOrSetToken();
-        const review = await getDailyReview(token);
-        const highlightDetails = await Promise.all(
-          review.highlights.map(async (highlight) => ({
-            ...highlight,
-            bookId: (await getHighlightBookId(highlight, token)).bookId,
-          })),
-        );
+        const highlightDetails = await getHighlights(token);
         const blocks = await Promise.allSettled(
           highlightDetails.map(
             async (highlight) => await this.findBlock(highlight),
