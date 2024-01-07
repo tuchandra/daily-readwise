@@ -103,24 +103,31 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
     new obsidian.Notice("Successfully set Readwise API token");
     return token;
   }
-  getBlockId({ id: highlightId }) {
-    return `rw${highlightId}`;
-  }
   async findBlock(highlight) {
     var _a;
-    const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
-    const bookTitle = Object.keys(bookIdsMap).find(
-      (title) => bookIdsMap[title] === highlight.bookId.toString()
+    const file = this.findFile(highlight);
+    const blocks = ((_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.blocks) || {};
+    const block = blocks[`rw${highlight.id}`];
+    const link = `![[${file.basename}#^${block.id}]]`;
+    return { block, file, link, highlight };
+  }
+  /**
+   * Find the file in the vault that corresponds to the _book_ containing a given
+   * highlight. This uses the Readwise plugin settings, which already map book titles
+   * to book IDs for the usual syncing.
+   */
+  findFile({ bookId }) {
+    const { booksIDsMap } = this.getOfficialPluginSettings();
+    const bookTitle = Object.keys(booksIDsMap).find(
+      (title) => booksIDsMap[title] === bookId.toString()
     );
-    if (!bookTitle)
-      throw new Error(`No book found for id ${highlight.bookId}`);
+    if (!bookTitle) {
+      throw new Error(`No book found for id ${bookId}`);
+    }
     const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
-    if (!(maybeFile instanceof obsidian.TFile))
-      throw new Error(`No book found for id ${highlight.bookId}`);
-    const blocks = ((_a = this.app.metadataCache.getFileCache(maybeFile)) == null ? void 0 : _a.blocks) || {};
-    const block = blocks[this.getBlockId(highlight)];
-    const link = `![[${maybeFile.basename}#^${block.id}]]`;
-    return { block, file: maybeFile, link, highlight };
+    if (maybeFile instanceof obsidian.TFile)
+      return maybeFile;
+    throw new Error(`No book found for id ${bookId}`);
   }
   async onload() {
     await this.loadSettings();

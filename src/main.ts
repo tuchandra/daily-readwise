@@ -18,10 +18,12 @@ interface PluginSettings {
 
 /**
  * Simplified version of the official Readwise plugin's settings; we need the API token
- * and the book IDs/titles map so that we can integrate with the existing exports.
+ * and the book IDs/titles map so that we can integrate with the highlights that have
+ * already been exported to vaults.
  */
 interface ReadwiseOfficialPluginSettings {
   booksIDsMap: { [key: string]: string };
+  readwiseDir: string;
   token: string;
 }
 
@@ -109,35 +111,42 @@ export default class DailyHighlightsPlugin extends Plugin {
     return token;
   }
 
-  getBlockId({ id: highlightId }: Highlight): string {
-    return `rw${highlightId}`;
-  }
-
   async findBlock(highlight: Highlight): Promise<{
     file: TFile;
     block: BlockCache;
     link: string;
     highlight: Highlight;
   }> {
-    const bookIdsMap = this.getOfficialPluginSettings().booksIDsMap;
-
-    // Find the key/value pair where the value is the highlight.id
-    const bookTitle = Object.keys(bookIdsMap).find(
-      (title) => bookIdsMap[title] === highlight.bookId.toString(),
-    );
-    if (!bookTitle) throw new Error(`No book found for id ${highlight.bookId}`);
-
-    const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
-    if (!(maybeFile instanceof TFile))
-      throw new Error(`No book found for id ${highlight.bookId}`);
+    const file = this.findFile(highlight);
 
     // blocks: Record<string, BlockCache>, where keys are block IDs
-    const blocks = this.app.metadataCache.getFileCache(maybeFile)?.blocks || {};
-    const block = blocks[this.getBlockId(highlight)];
+    const blocks = this.app.metadataCache.getFileCache(file)?.blocks || {};
+    const block = blocks[`rw${highlight.id}`];
+    const link = `![[${file.basename}#^${block.id}]]`;
 
-    const link = `![[${maybeFile.basename}#^${block.id}]]`;
+    return { block, file: file, link, highlight };
+  }
 
-    return { block, file: maybeFile, link, highlight };
+  /**
+   * Find the file in the vault that corresponds to the _book_ containing a given
+   * highlight. This uses the Readwise plugin settings, which already map book titles
+   * to book IDs for the usual syncing.
+   */
+  findFile({ bookId }: Highlight): TFile {
+    const { booksIDsMap } = this.getOfficialPluginSettings();
+
+    // Find the key/value pair where the value matches the book ID
+    const bookTitle = Object.keys(booksIDsMap).find(
+      (title) => booksIDsMap[title] === bookId.toString(),
+    );
+    if (!bookTitle) {
+      throw new Error(`No book found for id ${bookId}`);
+    }
+
+    const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
+    if (maybeFile instanceof TFile) return maybeFile;
+
+    throw new Error(`No book found for id ${bookId}`);
   }
 
   async onload() {
