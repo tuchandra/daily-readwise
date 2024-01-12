@@ -1,6 +1,6 @@
 {
   "name": "daily-readwise",
-  "version": "0.0.0",
+  "version": "1.0.0-beta3",
   "devDependencies": {
     "@biomejs/biome": "^1.4.1",
     "@types/bun": "^1.0.0",
@@ -16,7 +16,8 @@
     "format": "bunx @biomejs/biome format --write .",
     "lint": "bunx @biomejs/biome lint src/main.ts src/api.ts",
     "lint:fix": "bunx @biomejs/biome lint src/main.ts src/api.ts --apply-unsafe",
-    "fix": "bun format && bun lint:fix"
+    "fix": "bun format && bun lint:fix",
+    "version": "python -m src.version"
   },
   "type": "module"
 }
