@@ -123,13 +123,13 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
    * highlight. This uses the Readwise plugin settings, which already map book titles
    * to book IDs for the usual syncing.
    */
-  findFile({ bookId }) {
+  findFile({ bookId, title }) {
     const { booksIDsMap } = this.getOfficialPluginSettings();
     const bookTitle = Object.keys(booksIDsMap).find(
-      (title) => booksIDsMap[title] === bookId.toString()
+      (title2) => booksIDsMap[title2] === bookId.toString()
     );
     if (!bookTitle) {
-      throw new Error(`No book found for id ${bookId}`);
+      throw new Error(`No book found for '${title}' with id ${bookId}`);
     }
     const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
     if (maybeFile instanceof obsidian.TFile)
@@ -155,6 +155,7 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
         const highlightsWithLinks = blocks.flatMap(
           (x) => x.status === "fulfilled" ? [x.value] : []
         );
+        console.log(blocks, highlightsWithLinks);
         const modalContents = highlightsWithLinks.map((x) => ({
           highlightId: x.block.id,
           text: x.highlight.text,

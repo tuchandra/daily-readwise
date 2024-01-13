@@ -51,8 +51,21 @@ To develop the project:
 - Start the development server with `bun dev`.
 - Format and lint (with autofixes) with `bun fix`.
 
+The build process generates main.js and places it in the root of the repo.
+I commit this file to Github for simplicity.
+
+To create a release:
+
+- Increment the version: `bun version <name>`, where the name is e.g., `1.0.0-beta4`.
+- Commit the (now-changed) package.json and manifest.json files.
+- Create a new tag with the same name: `git tag -a <name> -m <name>`
+- Push the commit(s) & tag.
+
+In response to pushing the tag, Github Actions will create a new release that includes the main.js & manifest.json files..
+
 ## Releases
-I have not released this plugin and don't plan to.
-If you're interested in using this plugin, please install it via the excellent and community-maintained [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+I have created beta releases to support installation with the excellent, community-maintained [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+I don't plan to submit this as an official plugin unless there is interest from not-just-me.
 
 Issues, PRs, and discussions are welcome.
+If you like this, please let me know!

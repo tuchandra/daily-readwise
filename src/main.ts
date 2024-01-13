@@ -141,7 +141,7 @@ export default class DailyHighlightsPlugin extends Plugin {
    * highlight. This uses the Readwise plugin settings, which already map book titles
    * to book IDs for the usual syncing.
    */
-  findFile({ bookId }: Highlight): TFile {
+  findFile({ bookId, title }: Highlight): TFile {
     const { booksIDsMap } = this.getOfficialPluginSettings();
 
     // Find the key/value pair where the value matches the book ID
@@ -149,7 +149,7 @@ export default class DailyHighlightsPlugin extends Plugin {
       (title) => booksIDsMap[title] === bookId.toString(),
     );
     if (!bookTitle) {
-      throw new Error(`No book found for id ${bookId}`);
+      throw new Error(`No book found for '${title}' with id ${bookId}`);
     }
 
     const maybeFile = this.app.vault.getAbstractFileByPath(bookTitle);
