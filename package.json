@@ -17,7 +17,7 @@
     "lint": "bunx @biomejs/biome lint src/main.ts src/api.ts",
     "lint:fix": "bunx @biomejs/biome lint src/main.ts src/api.ts --apply-unsafe",
     "fix": "bun format && bun lint:fix",
-    "version": "python -m src.version"
+    "version": "python -m utils.version"
   },
   "type": "module"
 }
