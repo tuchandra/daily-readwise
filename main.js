@@ -56,7 +56,7 @@ class HighlightModal extends obsidian.FuzzySuggestModal {
   onChooseItem(item) {
     new obsidian.Notice(`Selected ${item.title}`);
     this.editor.replaceSelection(
-      `Highlight from [[${item.title}]]
+      `From [[${item.title}]].
 
 ![[${item.title}#^${item.highlightId}]]
 
@@ -144,7 +144,7 @@ class DailyHighlightsPlugin extends obsidian.Plugin {
     });
     this.addCommand({
       id: "add-review-highlights",
-      name: "asdf Add daily review highlights to current note",
+      name: "Add daily highlights to current note",
       editorCallback: async (editor) => {
         const token = await this.getOrSetToken();
         const highlights = await getHighlights(token);

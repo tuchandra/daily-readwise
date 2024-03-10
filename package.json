@@ -1,6 +1,6 @@
 {
   "name": "daily-readwise",
-  "version": "1.0.0-beta5",
+  "version": "1.0.0-beta6",
   "devDependencies": {
     "@biomejs/biome": "^1.4.1",
     "@types/bun": "^1.0.0",
