@@ -62,7 +62,6 @@ class HighlightModal extends obsidian.FuzzySuggestModal {
 
 `
     );
-    this.highlights.remove(item);
   }
   renderSuggestion(match, el) {
     el.createEl("h2", { text: match.item.title });

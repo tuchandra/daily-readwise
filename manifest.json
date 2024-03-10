@@ -1,7 +1,7 @@
 {
   "id": "daily-readwise",
   "name": "Readwise highlights",
-  "version": "1.0.0-beta4",
+  "version": "1.0.0-beta5",
   "minAppVersion": "1.0.0",
   "description": "Integrate Readwise daily reviews into Obsidian daily notes. This plugin is not affiliated with Readwise.",
   "author": "Tushar Chandra",

@@ -59,11 +59,9 @@ export class HighlightModal extends FuzzySuggestModal<HighlightModalEntry> {
     new Notice(`Selected ${item.title}`);
 
     this.editor.replaceSelection(
-      `Highlight from [[${item.title}]]\n\n` +
+      `From [[${item.title}]].\n\n` +
         `![[${item.title}#^${item.highlightId}]]\n\n`,
     );
-
-    this.highlights.remove(item);
   }
 
   renderSuggestion(
@@ -169,7 +167,7 @@ export default class DailyHighlightsPlugin extends Plugin {
 
     this.addCommand({
       id: 'add-review-highlights',
-      name: 'asdf Add daily review highlights to current note',
+      name: 'Add daily highlights to current note',
       editorCallback: async (editor: Editor) => {
         const token = await this.getOrSetToken();
         const highlights = await getHighlights(token);
@@ -180,6 +178,7 @@ export default class DailyHighlightsPlugin extends Plugin {
         const highlightsWithLinks = blocks.flatMap((x) =>
           x.status === 'fulfilled' ? [x.value] : [],
         );
+        console.log(blocks, highlightsWithLinks);
 
         const modalContents = highlightsWithLinks.map((x) => ({
           highlightId: x.block.id,
